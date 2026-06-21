@@ -36,7 +36,7 @@ app.get('/', (req, res) => {
     },
   });
 });
-
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/users', userRoutes);
 app.use('/reports', reportRoutes);
 
