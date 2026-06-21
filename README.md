@@ -111,7 +111,6 @@ O site acessa a imagem pelo Nginx:
 
 ```text
 http://localhost:8080/files/nome-do-arquivo
-http://localhost:8080/files/report-1781179584124-580347609.png
 ```
 
 ---
@@ -292,14 +291,12 @@ Listar arquivos:
 
 ```bash
 find . -name '*:Zone.Identifier' -type f -print
-find . -name '*Zone.Identifier' -type f -print
 ```
 
 Apagar arquivos:
 
 ```bash
 find . -name '*:Zone.Identifier' -type f -delete
-find . -name '*Zone.Identifier' -type f -delete
 ```
 
 ---
@@ -354,94 +351,3 @@ Senha: 123456
 ## Upload de imagens
 
 O sistema aceita imagens JPEG, PNG, WebP, GIF, HEIC e HEIF até 15MB. Arquivos HEIC/HEIF enviados por celular são convertidos para JPG antes de serem salvos no MinIO.
-
-
----
-
-## Login com Google Cloud
-
-1. No Google Cloud Console, crie um OAuth Client ID do tipo **Web application**.
-2. Em **Authorized JavaScript origins**, adicione os endereços usados no frontend, por exemplo:
-
-```text
-http://localhost:8080
-https://SEU-LINK.ngrok-free.dev
-```
-
-3. Copie o **Client ID** gerado pelo Google.
-4. Crie um arquivo `.env` na raiz do projeto:
-
-```env
-VITE_GOOGLE_CLIENT_ID=SEU_CLIENT_ID.apps.googleusercontent.com
-```
-
-5. No arquivo `backend/.env.docker`, configure o mesmo Client ID:
-
-```env
-GOOGLE_CLIENT_ID=SEU_CLIENT_ID.apps.googleusercontent.com
-```
-
-6. Recrie o frontend/backend:
-
-```bash
-docker compose up --build -d
-```
-
-7. Acesse:
-
-```text
-http://localhost:8080/entrar
-```
-
-O botão do Google aparece quando `VITE_GOOGLE_CLIENT_ID` está configurado.
-
----
-
-## Localização atual do usuário
-
-Na tela **Nova Ocorrência**, o botão **Usar minha localização atual** usa a localização do navegador/celular.
-
-Para funcionar no celular, acesse o sistema por HTTPS, por exemplo via ngrok:
-
-```bash
-ngrok http 8080
-```
-
-Depois abra o link `https://...ngrok-free.dev` no celular e permita o acesso à localização quando o navegador pedir.
-
-A localização salva na ocorrência continua sendo:
-
-```text
-latitude
-longitude
-```
-
-A precisão aproximada aparece apenas na tela para ajudar o usuário a confirmar o ponto.
-
----
-
-## Recursos desta versão
-
-Esta versão mantém juntos:
-
-```text
-Login tradicional
-Login com Google OAuth
-Geolocalização no mapa inicial
-Botão “Usar minha localização atual” na nova ocorrência
-MinIO para imagens
-MySQL + Docker + Nginx
-```
-
-Para rodar:
-
-```bash
-docker compose down
-docker compose up --build -d
-```
-
-Para testar pelo celular:
-
-```bash
-ngrok http 8080
-```

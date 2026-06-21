@@ -49,7 +49,6 @@ CREATE TABLE users (
   id CHAR(36) NOT NULL,
   nome VARCHAR(120) NOT NULL,
   email VARCHAR(180) NOT NULL,
-  google_id VARCHAR(255) NULL,
   senha VARCHAR(255) NOT NULL,
   role ENUM('user','admin') NOT NULL DEFAULT 'user',
   ativo TINYINT(1) NOT NULL DEFAULT 1,
@@ -59,7 +58,6 @@ CREATE TABLE users (
   atualizado_em DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   PRIMARY KEY (id),
   UNIQUE KEY uk_users_email (email),
-  UNIQUE KEY uk_users_google_id (google_id),
   KEY idx_users_role (role),
   KEY idx_users_ativo (ativo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
