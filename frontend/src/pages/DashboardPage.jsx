@@ -142,7 +142,7 @@ export default function DashboardPage() {
                         <span style={{ fontSize:11, color:'var(--text3)', fontFamily:'var(--font-display)' }}>{protocol}</span>
                         <span style={{ fontSize:11, color:'var(--text3)', display:'flex', alignItems:'center', gap:3 }}><Clock size={10}/>{date}</span>
                         <span style={{ fontSize:11, color:'var(--text3)', textTransform:'capitalize' }}>
-                          Bairro {r.categoria}
+                          {r.bairro ? `Bairro ${r.bairro}` : ''}
                         </span>
                       </div>
                     </div>
