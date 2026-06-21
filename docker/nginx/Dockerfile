@@ -1,9 +1,6 @@
 FROM node:20-alpine AS build
 
 WORKDIR /app
-RUN npm config set registry https://registry.npmjs.org/
-ARG VITE_GOOGLE_CLIENT_ID
-ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 COPY frontend/package*.json ./
 RUN npm install
 COPY frontend/ ./
