@@ -32,12 +32,13 @@ const User = {
     const id = data.id || randomUUID();
     const hash = await bcrypt.hash(data.senha, 12);
     await db.execute(
-      `INSERT INTO users (id, nome, email, senha, role, ativo, telefone, bairro)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (id, nome, email, google_id, senha, role, ativo, telefone, bairro)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         data.nome,
         data.email,
+        data.google_id || null,
         hash,
         data.role || 'user',
         data.ativo === undefined ? 1 : Number(data.ativo),
@@ -63,6 +64,14 @@ const User = {
     const { clause, params } = buildWhere(where);
     const rows = await db.query(`SELECT * FROM users ${clause} LIMIT 1`, params);
     return wrapUser(rows[0]);
+  },
+
+  async linkGoogleAccount(id, googleId, nome) {
+    await db.execute(
+      `UPDATE users SET google_id = ?, nome = COALESCE(NULLIF(?, ''), nome) WHERE id = ?`,
+      [googleId, nome || null, id]
+    );
+    return this.findByPk(id);
   },
 
   async findAll({ where = {}, order } = {}) {

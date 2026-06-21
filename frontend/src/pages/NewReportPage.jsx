@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import { ArrowLeft, ArrowRight, Upload, MapPin, CheckCircle, Loader, Image, X, User, UserX } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -34,6 +34,17 @@ function LocationPicker({ pos, setPos }) {
   return pos ? <Marker position={pos}/> : null
 }
 
+function MapAutoCenter({ pos }) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!pos) return
+    map.flyTo(pos, Math.max(map.getZoom(), 16), { duration: 0.8 })
+  }, [map, pos])
+
+  return null
+}
+
 export default function NewReportPage() {
   const [step, setStep]       = useState(0)
   const [cat, setCat]         = useState('')
@@ -41,6 +52,8 @@ export default function NewReportPage() {
   const [desc, setDesc]       = useState('')
   const [anonimo, setAnonimo] = useState(false)
   const [pos, setPos]         = useState(null)
+  const [locationAccuracy, setLocationAccuracy] = useState(null)
+  const [locating, setLocating] = useState(false)
   const [img, setImg]         = useState(null)
   const [preview, setPreview] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -52,6 +65,43 @@ export default function NewReportPage() {
     if (!f) return
     if (f.size > 15*1024*1024) { toast.error('Imagem muito grande (máx 15MB)'); return }
     setImg(f); setPreview(URL.createObjectURL(f))
+  }
+
+
+  const usarMinhaLocalizacao = () => {
+    if (!navigator.geolocation) {
+      toast.error('Seu navegador não suporta localização automática')
+      return
+    }
+
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords
+        setPos([latitude, longitude])
+        setLocationAccuracy(Math.round(accuracy || 0))
+        toast.success('Localização atual marcada no mapa')
+        setLocating(false)
+      },
+      (error) => {
+        let msg = 'Não foi possível obter sua localização'
+        if (error.code === 1) msg = 'Permissão de localização negada pelo navegador'
+        if (error.code === 2) msg = 'Localização indisponível neste momento'
+        if (error.code === 3) msg = 'Tempo esgotado ao buscar localização'
+        toast.error(msg)
+        setLocating(false)
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      }
+    )
+  }
+
+  const marcarLocalManual = (novaPos) => {
+    setPos(novaPos)
+    setLocationAccuracy(null)
   }
 
   const canNext = () => {
@@ -66,7 +116,7 @@ export default function NewReportPage() {
     try {
       const fd = new FormData()
       fd.append('titulo', titulo); fd.append('descricao', desc)
-      fd.append('categoria', cat); fd.append('latitude', pos[0]); fd.append('longitude', pos[1])
+      fd.append('categoria', cat); fd.append('latitude', pos[0]); fd.append('longitude', pos[1]); if (locationAccuracy) fd.append('precisao_metros', locationAccuracy)
       fd.append('anonimo', anonimo)
       if (img) fd.append('imagem', img)
       const { data } = await reportsApi.criar(fd)
@@ -98,7 +148,7 @@ export default function NewReportPage() {
             <button onClick={()=>navigate('/minhas-ocorrencias')} style={{ flex:1, padding:'12px 0', background:'var(--brand)', color:'white', border:'none', borderRadius:10, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'var(--font-body)' }}>
               Acompanhar Ocorrência
             </button>
-            <button onClick={()=>{ setStep(0);setCat('');setTitulo('');setDesc('');setPos(null);setImg(null);setPreview(null) }} style={{ flex:1, padding:'12px 0', background:'var(--bg2)', color:'var(--text)', border:'1px solid var(--border)', borderRadius:10, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'var(--font-body)' }}>
+            <button onClick={()=>{ setStep(0);setCat('');setTitulo('');setDesc('');setPos(null);setLocationAccuracy(null);setImg(null);setPreview(null) }} style={{ flex:1, padding:'12px 0', background:'var(--bg2)', color:'var(--text)', border:'1px solid var(--border)', borderRadius:10, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'var(--font-body)' }}>
               Fazer nova Ocorrência
             </button>
           </div>
@@ -194,20 +244,29 @@ export default function NewReportPage() {
             {/* Step 2: localização */}
             {step===2&&(
               <div>
-                {!pos&&(
-                  <div style={{ background:'var(--brand-dim)', border:'1px solid var(--brand-border)', borderRadius:9, padding:'10px 14px', marginBottom:14, display:'flex', alignItems:'center', gap:8, fontSize:13, color:'var(--brand)', fontWeight:500 }}>
-                    <MapPin size={14}/> Clique no mapa para marcar o local da ocorrência
-                  </div>
-                )}
-                {pos&&(
-                  <div style={{ background:'#DCFCE7', border:'1px solid #86EFAC', borderRadius:9, padding:'10px 14px', marginBottom:14, display:'flex', alignItems:'center', gap:8, fontSize:13, color:'#16A34A', fontWeight:500 }}>
-                    <CheckCircle size={14}/> Localização marcada: {pos[0].toFixed(5)}, {pos[1].toFixed(5)}
-                  </div>
-                )}
+                <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:14 }}>
+                  <button type="button" onClick={usarMinhaLocalizacao} disabled={locating} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', padding:'12px 14px', background:locating?'var(--surface)':'var(--brand)', color:locating?'var(--text3)':'white', border:'none', borderRadius:10, cursor:locating?'not-allowed':'pointer', fontSize:14, fontWeight:700, fontFamily:'var(--font-body)', boxShadow:locating?'none':'0 4px 16px rgba(107,63,160,.25)' }}>
+                    {locating ? <Loader size={16} style={{ animation:'spin .8s linear infinite' }}/> : <MapPin size={16}/>} 
+                    {locating ? 'Buscando sua localização...' : 'Usar minha localização atual'}
+                  </button>
+
+                  {!pos&&(
+                    <div style={{ background:'var(--brand-dim)', border:'1px solid var(--brand-border)', borderRadius:9, padding:'10px 14px', display:'flex', alignItems:'center', gap:8, fontSize:13, color:'var(--brand)', fontWeight:500 }}>
+                      <MapPin size={14}/> Use sua localização atual ou clique no mapa para marcar o local da ocorrência.
+                    </div>
+                  )}
+                  {pos&&(
+                    <div style={{ background:'#DCFCE7', border:'1px solid #86EFAC', borderRadius:9, padding:'10px 14px', display:'flex', alignItems:'center', gap:8, fontSize:13, color:'#16A34A', fontWeight:500, flexWrap:'wrap' }}>
+                      <CheckCircle size={14}/> Localização marcada: {pos[0].toFixed(5)}, {pos[1].toFixed(5)}
+                      {locationAccuracy ? <span style={{ color:'#15803D' }}>· precisão aprox. {locationAccuracy}m</span> : null}
+                    </div>
+                  )}
+                </div>
                 <div className="newreport-map" style={{ borderRadius:12, overflow:'hidden', border:'1px solid var(--border)', height:360 }}>
-                  <MapContainer center={VIDEIRA_CENTER} zoom={14} maxBounds={VIDEIRA_BOUNDS} maxBoundsViscosity={1} minZoom={17} maxZoom={18} style={{ height:'100%', width:'100%', cursor:'crosshair' }} zoomControl={false}>
+                  <MapContainer center={pos || VIDEIRA_CENTER} zoom={pos ? 16 : 14} maxBounds={VIDEIRA_BOUNDS} maxBoundsViscosity={0.6} minZoom={12} maxZoom={18} style={{ height:'100%', width:'100%', cursor:'crosshair' }} zoomControl={false}>
                     <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>
-                    <LocationPicker pos={pos} setPos={setPos}/>
+                    <MapAutoCenter pos={pos}/>
+                    <LocationPicker pos={pos} setPos={marcarLocalManual}/>
                   </MapContainer>
                 </div>
               </div>
@@ -219,7 +278,7 @@ export default function NewReportPage() {
                 <SummaryRow label="Categoria"    val={CATS.find(c=>c.v===cat)?.l||cat} emoji={CATS.find(c=>c.v===cat)?.e}/>
                 <SummaryRow label="Título"       val={titulo}/>
                 {desc&&<SummaryRow label="Descrição" val={desc}/>}
-                <SummaryRow label="Localização"  val={pos?`${pos[0].toFixed(5)}, ${pos[1].toFixed(5)}`:'Não informada'}/>
+                <SummaryRow label="Localização"  val={pos?`${pos[0].toFixed(5)}, ${pos[1].toFixed(5)}${locationAccuracy ? ` · precisão aprox. ${locationAccuracy}m` : ''}`:'Não informada'}/>
                 <SummaryRow label="Identificação" val={anonimo?'Anônimo':'Identificado'}/>
                 {preview&&(
                   <div>
