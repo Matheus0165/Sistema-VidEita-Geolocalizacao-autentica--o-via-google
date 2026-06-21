@@ -317,3 +317,23 @@ button, a { -webkit-tap-highlight-color: transparent; }
     top: 96px !important;
   }
 }
+
+/* Botão de localização atual no mapa inicial */
+.map-locate-button {
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .map-topbar {
+    grid-template-columns: 1fr 1fr auto !important;
+  }
+
+  .map-locate-button {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+  }
+
+  .map-locate-button span {
+    display: inline !important;
+  }
+}

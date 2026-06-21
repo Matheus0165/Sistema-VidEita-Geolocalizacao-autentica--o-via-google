@@ -50,6 +50,35 @@ const serialize = (obj) => {
 
 const normalizeBool = (value) => value === true || value === 1 || value === '1' || value === 'true';
 
+
+const ensureGoogleAuthColumns = async () => {
+  try {
+    const columns = await query(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND COLUMN_NAME = 'google_id'`,
+      [config.database]
+    );
+
+    if (!columns.length) {
+      await execute(`ALTER TABLE users ADD COLUMN google_id VARCHAR(255) NULL AFTER email`);
+      console.log('🔐 Coluna users.google_id criada');
+    }
+
+    const indexes = await query(
+      `SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND INDEX_NAME = 'uk_users_google_id'`,
+      [config.database]
+    );
+
+    if (!indexes.length) {
+      await execute(`ALTER TABLE users ADD UNIQUE KEY uk_users_google_id (google_id)`);
+      console.log('🔐 Índice users.google_id criado');
+    }
+  } catch (err) {
+    console.log(`⚠️ Não foi possível ajustar colunas do Google Auth: ${err.message}`);
+  }
+};
+
 const ensureSeedAdmin = async () => {
   const email = process.env.SEED_ADMIN_EMAIL;
   const password = process.env.SEED_ADMIN_PASSWORD;
@@ -88,6 +117,7 @@ const connectDatabase = async () => {
       await connection.ping();
       connection.release();
       console.log(`✅ MySQL conectado em ${config.host}:${config.port}/${config.database}`);
+      await ensureGoogleAuthColumns();
       await ensureSeedAdmin();
       return;
     } catch (err) {

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { Link } from 'react-router-dom'
-import { Filter, Plus, RefreshCw, Loader, MapPin, X, Circle } from 'lucide-react'
+import { Filter, Plus, RefreshCw, Loader, MapPin, X, Circle, LocateFixed, CheckCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { reportsApi } from '../services/api'
 import { useAuth } from '../context/AuthContext'
@@ -50,6 +50,18 @@ const makeMarker = (status) => {
   })
 }
 
+const userLocationIcon = L.divIcon({
+  className: '',
+  html: `<div style="
+    width:24px;height:24px;border-radius:50%;
+    background:#2563EB;border:4px solid white;
+    box-shadow:0 0 0 8px rgba(37,99,235,.20), 0 3px 14px rgba(0,0,0,.28);
+  "></div>`,
+  iconSize: [24,24],
+  iconAnchor: [12,12],
+  popupAnchor: [0,-14],
+})
+
 // Constrains map view to Videira bounds
 function BoundsEnforcer() {
   const map = useMap()
@@ -74,12 +86,26 @@ function BoundsEnforcer() {
   return null
 }
 
+function FlyToUserLocation({ position }) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!position) return
+    map.flyTo(position, Math.max(map.getZoom(), 16), { duration: 0.8 })
+  }, [map, position])
+
+  return null
+}
+
 export default function MapPage() {
   const [reports, setReports]   = useState([])
   const [loading, setLoading]   = useState(true)
   const [filterCat, setFilterCat]     = useState('todas')
   const [filterStatus, setFilterStatus] = useState('todos')
   const [showFilters, setShowFilters]   = useState(false)
+  const [userLocation, setUserLocation] = useState(null)
+  const [locationAccuracy, setLocationAccuracy] = useState(null)
+  const [locating, setLocating] = useState(false)
   const { user } = useAuth()
 
   const fetch = useCallback(async () => {
@@ -95,6 +121,39 @@ export default function MapPage() {
   }, [filterCat, filterStatus])
 
   useEffect(() => { fetch() }, [fetch])
+
+  const usarMinhaLocalizacao = () => {
+    if (!navigator.geolocation) {
+      toast.error('Seu navegador não suporta localização automática')
+      return
+    }
+
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords
+        const point = [latitude, longitude]
+
+        setUserLocation(point)
+        setLocationAccuracy(Math.round(accuracy || 0))
+        toast.success('Localização atual encontrada no mapa')
+        setLocating(false)
+      },
+      (error) => {
+        let msg = 'Não foi possível obter sua localização'
+        if (error.code === 1) msg = 'Permissão de localização negada pelo navegador'
+        if (error.code === 2) msg = 'Localização indisponível neste momento'
+        if (error.code === 3) msg = 'Tempo esgotado ao buscar localização'
+        toast.error(msg)
+        setLocating(false)
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      }
+    )
+  }
 
   const activeFilters = (filterCat !== 'todas' ? 1 : 0) + (filterStatus !== 'todos' ? 1 : 0)
 
@@ -121,6 +180,11 @@ export default function MapPage() {
 
           <button onClick={fetch} disabled={loading} style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:9, padding:'8px 10px', cursor:'pointer', boxShadow:'var(--shadow)', color:'var(--text2)' }}>
             <RefreshCw size={14} style={{ animation:loading?'spin 1s linear infinite':'none' }}/>
+          </button>
+
+          <button className="map-locate-button" onClick={usarMinhaLocalizacao} disabled={locating} style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:7, background:userLocation?'#DBEAFE':'var(--bg2)', color:userLocation?'#1D4ED8':'var(--text2)', border:`1px solid ${userLocation?'#93C5FD':'var(--border)'}`, borderRadius:9, padding:'8px 12px', cursor:locating?'not-allowed':'pointer', boxShadow:'var(--shadow)', fontSize:13, fontWeight:600, fontFamily:'var(--font-body)' }}>
+            {locating ? <Loader size={14} style={{ animation:'spin .8s linear infinite' }}/> : <LocateFixed size={14}/>} 
+            <span>{locating ? 'Localizando...' : 'Minha localização'}</span>
           </button>
         </div>
 
@@ -184,6 +248,23 @@ export default function MapPage() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <BoundsEnforcer />
+          <FlyToUserLocation position={userLocation} />
+
+          {userLocation && (
+            <Marker position={userLocation} icon={userLocationIcon}>
+              <Popup maxWidth={260}>
+                <div style={{ padding:4 }}>
+                  <strong style={{ color:'var(--brand)' }}>Sua localização atual</strong>
+                  <p style={{ margin:'6px 0 0', fontSize:13, color:'var(--text2)' }}>
+                    {userLocation[0].toFixed(5)}, {userLocation[1].toFixed(5)}
+                  </p>
+                  {locationAccuracy ? (
+                    <p style={{ margin:'4px 0 0', fontSize:12, color:'var(--text3)' }}>Precisão aproximada: {locationAccuracy}m</p>
+                  ) : null}
+                </div>
+              </Popup>
+            </Marker>
+          )}
 
           {reports.map(r => (
             <Marker

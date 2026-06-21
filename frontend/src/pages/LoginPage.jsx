@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Loader, ArrowLeft } from 'lucide-react'
+import { GoogleLogin } from '@react-oauth/google'
 import toast from 'react-hot-toast'
 import { useAuth } from '../context/AuthContext'
 import Navbar from '../components/ui/Navbar'
@@ -12,7 +13,8 @@ export default function LoginPage() {
   const [senha, setSenha]     = useState('')
   const [show, setShow]       = useState(false)
   const [loading, setLoading] = useState(false)
-  const { login, register }   = useAuth()
+  const { login, googleLogin, register }   = useAuth()
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
   const navigate              = useNavigate()
 
   const submit = async (e) => {
@@ -91,6 +93,39 @@ export default function LoginPage() {
                 </button>
               </div>
             </Field>
+
+
+            {googleClientId && (
+              <>
+                <div style={{ display:'flex', alignItems:'center', gap:12, margin:'22px 0 18px' }}>
+                  <div style={{ height:1, background:'var(--border)', flex:1 }} />
+                  <span style={{ fontSize:12, color:'var(--text3)', fontWeight:600 }}>OU</span>
+                  <div style={{ height:1, background:'var(--border)', flex:1 }} />
+                </div>
+                <div style={{ display:'flex', justifyContent:'center' }}>
+                  <GoogleLogin
+                    onSuccess={async (response) => {
+                      try {
+                        setLoading(true)
+                        await googleLogin(response.credential)
+                        toast.success('Login com Google realizado!')
+                        navigate('/mapa')
+                      } catch (err) {
+                        toast.error(err.response?.data?.mensagem || 'Erro no login com Google')
+                      } finally {
+                        setLoading(false)
+                      }
+                    }}
+                    onError={() => toast.error('Não foi possível entrar com Google')}
+                    theme="outline"
+                    size="large"
+                    text={mode === 'login' ? 'signin_with' : 'signup_with'}
+                    shape="pill"
+                    width="320"
+                  />
+                </div>
+              </>
+            )}
 
             <button type="submit" disabled={loading} style={{ width:'100%', marginTop:24, padding:'13px 0', background:loading?'var(--surface)':'var(--brand)', color:loading?'var(--text3)':'white', border:'none', borderRadius:10, fontFamily:'var(--font-body)', fontSize:15, fontWeight:600, cursor:loading?'not-allowed':'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, transition:'all .2s', boxShadow:loading?'none':'0 4px 16px rgba(107,63,160,.3)' }}>
               {loading&&<Loader size={16} style={{ animation:'spin .8s linear infinite' }}/>}
