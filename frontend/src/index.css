@@ -685,7 +685,11 @@ svg {
     overflow-x: hidden !important;
   }
 
-  * {
+  .dashboard-grid *,
+  .newreport-container *,
+  .login-shell *,
+  .home-hero *,
+  .app-navbar * {
     max-width: 100%;
     box-sizing: border-box;
   }
@@ -782,6 +786,7 @@ svg {
     margin-top: 18px !important;
   }
 }
+
 /* Ajuste final mobile: botões da tela Nova Ocorrência */
 @media (max-width: 600px) {
   .newreport-container {
@@ -839,4 +844,126 @@ svg {
     padding: 12px 14px !important;
     font-size: 14px !important;
   }
+}
+
+/* Ajuste final Leaflet: CircleMarker, popups e tiles sem riscos */
+.leaflet-container,
+.leaflet-container * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Evita que as regras globais img/svg e max-width afetem o mapa */
+.leaflet-container img,
+.leaflet-container svg,
+.leaflet-container canvas {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.leaflet-container svg,
+.leaflet-container path {
+  max-width: none !important;
+}
+
+.leaflet-interactive {
+  cursor: pointer;
+}
+
+/* Tiles do OpenStreetMap: remove frestas/linhas entre imagens */
+.leaflet-container .leaflet-tile {
+  max-width: none !important;
+  max-height: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+@media (max-width: 768px) {
+  .leaflet-container .leaflet-tile {
+    width: 257px !important;
+    height: 257px !important;
+  }
+
+  .leaflet-control-attribution {
+    display: none !important;
+  }
+}
+
+.leaflet-container .leaflet-tile-pane,
+.leaflet-container .leaflet-tile-container,
+.leaflet-container .leaflet-map-pane,
+.leaflet-container .leaflet-pane,
+.leaflet-container .leaflet-layer {
+  max-width: none !important;
+}
+
+/* Popup da denúncia opaco no mapa */
+.leaflet-popup-pane {
+  z-index: 1800 !important;
+}
+
+.leaflet-popup {
+  opacity: 1 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #ffffff !important;
+  opacity: 1 !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 8px 40px rgba(26,18,41,.22) !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-content {
+  background: #ffffff !important;
+  opacity: 1 !important;
+  margin: 0 !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
+}
+
+.leaflet-popup-content > div {
+  background: #ffffff !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.leaflet-popup-tip {
+  background: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.leaflet-popup-content img {
+  opacity: 1 !important;
+  display: block !important;
+}
+.custom-pin-wrapper {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-pin {
+  width: 34px;
+  height: 34px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  position: relative;
+  border: 3px solid #ffffff;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
+}
+
+.custom-pin-inner {
+  width: 12px;
+  height: 12px;
+  background: #ffffff;
+  border-radius: 50%;
+  position: absolute;
+  top: 8px;
+  left: 8px;
 }
