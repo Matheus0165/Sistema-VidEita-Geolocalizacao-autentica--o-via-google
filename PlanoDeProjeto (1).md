@@ -115,7 +115,7 @@ O sistema deve permitir o cadastro de usuários através de:
 - Nome completo
 - E-mail
 - Senha
-
+- Google
 ---
 
 ## RF02 – Login
@@ -124,6 +124,7 @@ O sistema deve permitir autenticação utilizando:
 
 - E-mail
 - Senha
+- Google
 
 ---
 
@@ -438,4 +439,4 @@ Arquivada
 
 # 12. Considerações Finais
 
-O VidEita representa uma solução tecnológica voltada para a melhoria da comunicação entre cidadãos e órgãos públicos. A plataforma contribui para uma gestão urbana mais eficiente, transparente e participativa, fortalecendo o papel da população na identificação e resolução de problemas da cidade.
+O VidEita representa uma solução tecnológica voltada para a melhoria da comunicação entre cidadãos e órgãos públicos. A plataforma contribui para uma gestão urbana mais eficiente, transparente e participativa, fortalecendo o papel da população na identificação e resolução de problemas da cidade. https://www.figma.com/design/YjL1aTXOGOos1bbX2Q7prP/Pages?t=CgaTJBWManS2csp7-0
