@@ -15,19 +15,119 @@ const { upload } = require('../services/uploadService');
  * /reports:
  *   get:
  *     summary: Listar ocorrências
+ *     description: Usuários comuns veem apenas suas próprias ocorrências. Administradores veem todas.
  *     tags: [Ocorrências]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pendente, em_analise, em_andamento, resolvido, rejeitado]
+ *         description: Filtra por status.
+ *       - in: query
+ *         name: categoria
+ *         schema:
+ *           type: string
+ *           example: Buraco
+ *         description: Filtra por categoria.
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *         description: Página da listagem.
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           example: 20
+ *         description: Quantidade de registros por página.
  *     responses:
  *       200:
- *         description: Lista de ocorrências retornada com sucesso
+ *         description: Lista de ocorrências retornada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ReportListResponse'
  *       401:
- *         description: Token inválido ou ausente
+ *         $ref: '#/components/responses/Unauthorized'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
  */
-// GET /reports — listar Ocorrência do usuário (admin vê todas)
 router.get('/', authMiddleware, getAllReports);
 
-// GET /reports/nearby — buscar por proximidade (filtra por dono; admin vê todas)
+/**
+ * @swagger
+ * /reports/nearby:
+ *   get:
+ *     summary: Buscar ocorrências próximas
+ *     description: Retorna ocorrências dentro de um raio em km a partir de uma latitude e longitude.
+ *     tags: [Ocorrências]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: lat
+ *         required: true
+ *         schema:
+ *           type: number
+ *           example: -27.0085
+ *         description: Latitude do ponto central.
+ *       - in: query
+ *         name: lng
+ *         required: true
+ *         schema:
+ *           type: number
+ *           example: -51.1517
+ *         description: Longitude do ponto central.
+ *       - in: query
+ *         name: raio
+ *         schema:
+ *           type: number
+ *           example: 5
+ *         description: Raio de busca em quilômetros.
+ *     responses:
+ *       200:
+ *         description: Ocorrências próximas retornadas com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: sucesso
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     reports:
+ *                       type: array
+ *                       items:
+ *                         $ref: '#/components/schemas/Report'
+ *                     total:
+ *                       type: integer
+ *                       example: 2
+ *                     raio_km:
+ *                       type: number
+ *                       example: 5
+ *                     centro:
+ *                       type: object
+ *                       properties:
+ *                         latitude:
+ *                           type: number
+ *                           example: -27.0085
+ *                         longitude:
+ *                           type: number
+ *                           example: -51.1517
+ *       400:
+ *         description: Parâmetros lat e lng são obrigatórios.
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
+ */
 router.get('/nearby', authMiddleware, getReportsByLocation);
 
 /**
@@ -35,6 +135,7 @@ router.get('/nearby', authMiddleware, getReportsByLocation);
  * /reports:
  *   post:
  *     summary: Criar nova ocorrência
+ *     description: Cria uma ocorrência e, opcionalmente, envia uma imagem para o MinIO. Aceita JPG, PNG, WebP, GIF e HEIC/HEIF quando o backend estiver com conversão habilitada.
  *     tags: [Ocorrências]
  *     security:
  *       - bearerAuth: []
@@ -44,32 +145,59 @@ router.get('/nearby', authMiddleware, getReportsByLocation);
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required: [titulo, categoria, latitude, longitude]
  *             properties:
  *               titulo:
  *                 type: string
  *                 example: Buraco na rua
  *               descricao:
  *                 type: string
- *                 example: Buraco próximo ao mercado
+ *                 example: Buraco grande próximo ao mercado.
  *               categoria:
  *                 type: string
- *                 example: Infraestrutura
+ *                 example: Buraco
+ *               bairro:
+ *                 type: string
+ *                 example: Centro
+ *               endereco_texto:
+ *                 type: string
+ *                 example: Rua XV de Novembro
+ *               numero:
+ *                 type: string
+ *                 example: "123"
+ *               complemento:
+ *                 type: string
+ *                 example: Próximo ao mercado
+ *               ponto_referencia:
+ *                 type: string
+ *                 example: Em frente à praça
  *               latitude:
  *                 type: number
  *                 example: -27.0085
  *               longitude:
  *                 type: number
  *                 example: -51.1517
+ *               anonimo:
+ *                 type: boolean
+ *                 example: false
  *               imagem:
  *                 type: string
  *                 format: binary
+ *                 description: Imagem da ocorrência.
  *     responses:
  *       201:
- *         description: Ocorrência criada com sucesso
+ *         description: Ocorrência criada com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CreateReportResponse'
  *       400:
- *         description: Dados inválidos
+ *         description: Dados inválidos ou campos obrigatórios ausentes.
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       500:
+ *         $ref: '#/components/responses/InternalError'
  */
-// POST /reports — criar denúncia (autenticado, com upload opcional)
 router.post('/', authMiddleware, upload.single('imagem'), createReport);
 
 /**
@@ -77,7 +205,7 @@ router.post('/', authMiddleware, upload.single('imagem'), createReport);
  * /reports/{id}/status:
  *   patch:
  *     summary: Atualizar status de uma ocorrência
- *     description: Permite que apenas administradores alterem o status de uma ocorrência cadastrada.
+ *     description: Apenas administradores podem alterar o status.
  *     tags: [Ocorrências]
  *     security:
  *       - bearerAuth: []
@@ -85,43 +213,34 @@ router.post('/', authMiddleware, upload.single('imagem'), createReport);
  *       - in: path
  *         name: id
  *         required: true
- *         description: ID da ocorrência a ser atualizada.
  *         schema:
- *           type: integer
- *           example: 15
+ *           type: string
+ *           format: uuid
+ *         description: ID da ocorrência.
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - status
- *             properties:
- *               status:
- *                 type: string
- *                 enum:
- *                   - pendente
- *                   - em_analise
- *                   - em_andamento
- *                   - resolvido
- *                   - rejeitado
- *                 example: resolvido
+ *             $ref: '#/components/schemas/StatusUpdateRequest'
  *     responses:
  *       200:
  *         description: Status atualizado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CreateReportResponse'
  *       400:
- *         description: Status inválido ou dados incorretos.
+ *         description: Status inválido.
  *       401:
- *         description: Usuário não autenticado.
+ *         $ref: '#/components/responses/Unauthorized'
  *       403:
- *         description: Acesso negado. Apenas administradores podem alterar o status.
+ *         $ref: '#/components/responses/Forbidden'
  *       404:
- *         description: Ocorrência não encontrada.
+ *         $ref: '#/components/responses/NotFound'
  *       500:
- *         description: Erro interno do servidor.
+ *         $ref: '#/components/responses/InternalError'
  */
-// PATCH /reports/:id/status — atualizar status (somente admin)
 router.patch('/:id/status', authMiddleware, adminMiddleware, updateStatus);
 
 /**
@@ -129,7 +248,7 @@ router.patch('/:id/status', authMiddleware, adminMiddleware, updateStatus);
  * /reports/{id}:
  *   delete:
  *     summary: Excluir uma ocorrência
- *     description: Remove uma ocorrência do sistema. A ação pode ser realizada pelo proprietário da ocorrência ou por um administrador.
+ *     description: O proprietário da ocorrência ou um administrador pode remover o registro.
  *     tags: [Ocorrências]
  *     security:
  *       - bearerAuth: []
@@ -137,10 +256,10 @@ router.patch('/:id/status', authMiddleware, adminMiddleware, updateStatus);
  *       - in: path
  *         name: id
  *         required: true
- *         description: ID da ocorrência a ser removida.
  *         schema:
- *           type: integer
- *           example: 15
+ *           type: string
+ *           format: uuid
+ *         description: ID da ocorrência.
  *     responses:
  *       200:
  *         description: Ocorrência removida com sucesso.
@@ -149,19 +268,21 @@ router.patch('/:id/status', authMiddleware, adminMiddleware, updateStatus);
  *             schema:
  *               type: object
  *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: sucesso
  *                 mensagem:
  *                   type: string
- *                   example: Ocorrência removida com sucesso.
+ *                   example: Denúncia removida
  *       401:
- *         description: Usuário não autenticado.
+ *         $ref: '#/components/responses/Unauthorized'
  *       403:
- *         description: Usuário não possui permissão para remover esta ocorrência.
+ *         $ref: '#/components/responses/Forbidden'
  *       404:
- *         description: Ocorrência não encontrada.
+ *         $ref: '#/components/responses/NotFound'
  *       500:
- *         description: Erro interno do servidor.
+ *         $ref: '#/components/responses/InternalError'
  */
-// DELETE /reports/:id — remover denúncia (dono ou admin)
 router.delete('/:id', authMiddleware, deleteReport);
 
 module.exports = router;

@@ -17,7 +17,9 @@
     "mysql2": "^3.11.5",
     "minio": "^8.0.5",
     "heic-convert": "^2.1.0",
-    "google-auth-library": "^9.14.2"
+    "google-auth-library": "^9.14.2",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

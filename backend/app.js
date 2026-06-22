@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./src/config/swagger');
 require('dotenv').config();
 
 const userRoutes = require('./src/routes/userRoutes');
@@ -36,7 +38,22 @@ app.get('/', (req, res) => {
     },
   });
 });
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+app.get('/openapi.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customSiteTitle: 'VidEita API Docs',
+  customCss: `
+    .swagger-ui .topbar { display: none; }
+    .swagger-ui .info .title { color: #4E2D78; }
+    .swagger-ui .btn.authorize { border-color: #6B3FA0; color: #6B3FA0; }
+    .swagger-ui .btn.authorize svg { fill: #6B3FA0; }
+  `,
+}));
+
 app.use('/users', userRoutes);
 app.use('/reports', reportRoutes);
 
