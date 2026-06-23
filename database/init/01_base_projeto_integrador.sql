@@ -1,11 +1,3 @@
--- =============================================================
--- Banco remodelado para o site Urban/VidEita Reports
--- Migração JSON -> MySQL 8+
--- Arquivo gerado a partir de:
---   1) base_projeto_integrador.sql
---   2) projeto-Json-denuncias.zip/database/json/users.json e reports.json
--- =============================================================
-
 CREATE DATABASE IF NOT EXISTS base_projeto_integrador
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
@@ -39,12 +31,6 @@ DROP TABLE IF EXISTS cidadao;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
--- =============================================================
--- 1. Usuários do sistema
---    Substitui cidadao + funcionarios por uma entidade única com role.
---    Mantém os nomes de campos usados pelo backend atual: id, nome, email,
---    senha, role, criado_em, atualizado_em.
--- =============================================================
 CREATE TABLE users (
   id CHAR(36) NOT NULL,
   nome VARCHAR(120) NOT NULL,
@@ -64,9 +50,6 @@ CREATE TABLE users (
   KEY idx_users_ativo (ativo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- =============================================================
--- 2. Categorias exibidas no formulário, filtros e mapa
--- =============================================================
 CREATE TABLE report_categories (
   codigo VARCHAR(30) NOT NULL,
   nome VARCHAR(100) NOT NULL,
@@ -80,9 +63,6 @@ CREATE TABLE report_categories (
   KEY idx_report_categories_ativo_ordem (ativo, ordem)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- =============================================================
--- 3. Status aceitos pela API e pelo painel administrativo
--- =============================================================
 CREATE TABLE report_statuses (
   codigo VARCHAR(30) NOT NULL,
   nome VARCHAR(100) NOT NULL,
@@ -95,10 +75,6 @@ CREATE TABLE report_statuses (
   KEY idx_report_statuses_ativo_ordem (ativo, ordem)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- =============================================================
--- 4. Órgãos/setores responsáveis — opcional, mas já deixa a base pronta
---    para encaminhar denúncias por secretaria/setor no futuro.
--- =============================================================
 CREATE TABLE orgaos_publicos (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   nome VARCHAR(140) NOT NULL,
@@ -115,11 +91,6 @@ CREATE TABLE orgaos_publicos (
   KEY idx_orgaos_publicos_ativo (ativo)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- =============================================================
--- 5. Denúncias/Ocorrências
---    Substitui ocorrencia + localizacao + parte de anexos.
---    Os campos principais mantêm o nome que a aplicação JSON já usa.
--- =============================================================
 CREATE TABLE reports (
   id CHAR(36) NOT NULL,
   protocolo VARCHAR(30) GENERATED ALWAYS AS (
@@ -190,11 +161,6 @@ BEGIN
 END//
 DELIMITER ;
 
--- =============================================================
--- 6. Anexos da denúncia
---    O site atual usa uma imagem principal em reports, mas esta tabela
---    permite múltiplos arquivos depois sem remodelar tudo novamente.
--- =============================================================
 CREATE TABLE report_attachments (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   report_id CHAR(36) NOT NULL,
@@ -212,10 +178,6 @@ CREATE TABLE report_attachments (
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- =============================================================
--- 7. Histórico de status/respostas
---    Substitui respostas_status com uma modelagem mais flexível.
--- =============================================================
 CREATE TABLE report_status_history (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   report_id CHAR(36) NOT NULL,
@@ -267,9 +229,6 @@ BEGIN
 END//
 DELIMITER ;
 
--- =============================================================
--- 8. Encaminhamentos para órgãos/setores — evolução futura do painel admin
--- =============================================================
 CREATE TABLE report_encaminhamentos (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   report_id CHAR(36) NOT NULL,
@@ -292,9 +251,7 @@ CREATE TABLE report_encaminhamentos (
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- =============================================================
--- 9. Views úteis para a API
--- =============================================================
+
 CREATE OR REPLACE VIEW vw_reports_api AS
 SELECT
   r.id,
@@ -332,9 +289,7 @@ JOIN users u ON u.id = r.user_id
 JOIN report_categories c ON c.codigo = r.categoria
 JOIN report_statuses s ON s.codigo = r.status;
 
--- =============================================================
--- 10. Dados iniciais
--- =============================================================
+
 INSERT INTO report_categories (codigo, nome, emoji, descricao, area_responsavel, ordem) VALUES
   ('buraco', 'Buraco na via', '🕳️', 'Buracos, deformações e problemas no asfalto ou pavimento', 'Infraestrutura Urbana', 1),
   ('lixo', 'Descarte irregular', '🗑️', 'Lixo, entulho e descarte irregular em áreas públicas', 'Limpeza Urbana', 2),
@@ -358,7 +313,6 @@ INSERT INTO orgaos_publicos (nome, sigla, email_contato, telefone_contato, ender
   ('Departamento de Trânsito', 'DTRANS', 'transito@videira.sc.gov.br', '(49) 3533-2106', 'Sinalização e mobilidade urbana.'),
   ('Ouvidoria Municipal', 'OUV', 'ouvidoria@videira.sc.gov.br', '(49) 3533-2100', 'Triagem e atendimento inicial das ocorrências.');
 
--- Usuários migrados do JSON. O campo senha foi preservado como estava no arquivo.
 INSERT INTO users (id, nome, email, senha, role, ativo, criado_em, atualizado_em) VALUES
   ('642a8796-6e3a-4db1-a4ff-4004cbfe55a2', 'Teste', 'a@b.com', 'teste-da-senha', 'user', 1, '2026-04-22 23:29:48.817', '2026-04-22 23:29:48.817'),
   ('61dbeef7-9810-4c76-a84c-240ee089bb15', 'Gilberto', 'gilberto@gmail.com', '$2a$12$FZQbKexdqnwWP/DbCTT6Qu8FQHao9szXB2cXbWTMPMbvIsFRgppzG', 'admin', 1, '2026-04-24 12:20:10.995', '2026-04-24 12:20:10.995'),
@@ -367,7 +321,6 @@ INSERT INTO users (id, nome, email, senha, role, ativo, criado_em, atualizado_em
   ('9325231b-7b19-48de-afff-4e96fce45e93', 'zack-bocó', 'zack@gmail.com', '$2a$12$yV/nTHyhmuyK4ZCv9pp8DOMNwnbFAeP9poA6evvaTRWQaBYF0QusS', 'user', 1, '2026-05-21 11:32:28.256', '2026-05-21 11:32:28.256'),
   ('1f6767ed-4283-4e32-a257-56d9e02bab26', 'Usuário legado migrado', 'usuario.legado+1f6767ed@local.invalid', 'usuario-legado-inativo-sem-login', 'user', 0, '2026-01-01 00:00:00.000', '2026-01-01 00:00:00.000');
 
--- Denúncias migradas do JSON.
 INSERT INTO reports (id, titulo, descricao, categoria, latitude, longitude, imagem_url, imagem_public_id, status, user_id, anonimo, criado_em, atualizado_em) VALUES
   ('3d148ee4-1316-4f8d-a5ab-14bc61730cb7', 'Degradação da via', 'Devido a frequência de caminhões na via, o asfalto se moldou e resulto em uma grande elevação do asfalto, tornando a travessia de motoqueiros perigosa.', 'buraco', -27.02906948947779, -51.14932894706727, '/uploads/report-1778843809359-690142070.jpg', 'report-1778843809359-690142070.jpg', 'pendente', '1f6767ed-4283-4e32-a257-56d9e02bab26', 0, '2026-05-15 11:16:49.365', '2026-05-15 11:16:49.365'),
   ('cbe2c671-6b5b-4635-945e-a3b01cebcd02', 'Poste com fios soltos', 'Poste em frente a residência número 360 está com os fios de luz exposto, favor ajustar este problema, pois existe uma grande passagem de pedestres pelo local', 'iluminacao', -27.007264294377098, -51.116251945495605, '/uploads/report-1778844295777-881986647.jpg', 'report-1778844295777-881986647.jpg', 'em_analise', '61dbeef7-9810-4c76-a84c-240ee089bb15', 0, '2026-05-15 11:24:55.779', '2026-05-15 11:49:39.119'),
@@ -381,7 +334,6 @@ INSERT INTO reports (id, titulo, descricao, categoria, latitude, longitude, imag
   ('9290244c-0988-4274-8aee-8a6cc4f79583', 'esse zack é muito bocó', 'isso ai', 'sinalizacao', -27.009284777144508, -51.15167856216431, '/uploads/report-1779453250906-304780762.png', 'report-1779453250906-304780762.png', 'pendente', '9325231b-7b19-48de-afff-4e96fce45e93', 1, '2026-05-22 12:34:10.909', '2026-05-22 12:34:10.909'),
   ('0d795398-666a-4b0e-884e-f58a577ea0a8', 'asdasd', 'asdasd', 'sinalizacao', -27.00973403390071, -51.14899635314942, '/uploads/report-1779453276203-600090155.png', 'report-1779453276203-600090155.png', 'pendente', '9325231b-7b19-48de-afff-4e96fce45e93', 0, '2026-05-22 12:34:36.205', '2026-05-22 12:34:36.205');
 
--- Cópia das imagens principais para a tabela de anexos, preparando suporte a múltiplos uploads.
 INSERT INTO report_attachments (report_id, nome_arquivo, url, public_id, mime_type, descricao) VALUES
   ('3d148ee4-1316-4f8d-a5ab-14bc61730cb7', 'report-1778843809359-690142070.jpg', '/uploads/report-1778843809359-690142070.jpg', 'report-1778843809359-690142070.jpg', 'image/jpeg', 'Imagem principal migrada do JSON'),
   ('cbe2c671-6b5b-4635-945e-a3b01cebcd02', 'report-1778844295777-881986647.jpg', '/uploads/report-1778844295777-881986647.jpg', 'report-1778844295777-881986647.jpg', 'image/jpeg', 'Imagem principal migrada do JSON'),
@@ -389,30 +341,3 @@ INSERT INTO report_attachments (report_id, nome_arquivo, url, public_id, mime_ty
   ('9fffc173-7e1e-4d7c-b616-d32a5fc0fbf6', 'report-1779363404563-634402347.jpg', '/uploads/report-1779363404563-634402347.jpg', 'report-1779363404563-634402347.jpg', 'image/jpeg', 'Imagem principal migrada do JSON'),
   ('9290244c-0988-4274-8aee-8a6cc4f79583', 'report-1779453250906-304780762.png', '/uploads/report-1779453250906-304780762.png', 'report-1779453250906-304780762.png', 'image/png', 'Imagem principal migrada do JSON'),
   ('0d795398-666a-4b0e-884e-f58a577ea0a8', 'report-1779453276203-600090155.png', '/uploads/report-1779453276203-600090155.png', 'report-1779453276203-600090155.png', 'image/png', 'Imagem principal migrada do JSON');
-
--- =============================================================
--- 11. Consultas úteis para testar depois da importação
--- =============================================================
--- Total por status:
--- SELECT status, COUNT(*) AS total FROM reports GROUP BY status ORDER BY total DESC;
---
--- Denúncias do usuário logado:
--- SELECT * FROM vw_reports_api WHERE user_id = '<id_do_usuario>' ORDER BY criado_em DESC;
---
--- Filtro por mapa/categoria/status:
--- SELECT * FROM vw_reports_api
--- WHERE categoria = 'buraco' AND status = 'pendente'
--- ORDER BY criado_em DESC;
---
--- Busca por proximidade usando Haversine, exemplo centro de Videira e raio 5 km:
--- SELECT *,
---   (6371 * ACOS(
---     COS(RADIANS(-27.0089)) * COS(RADIANS(latitude)) *
---     COS(RADIANS(longitude) - RADIANS(-51.1505)) +
---     SIN(RADIANS(-27.0089)) * SIN(RADIANS(latitude))
---   )) AS distancia_km
--- FROM vw_reports_api
--- HAVING distancia_km <= 5
--- ORDER BY distancia_km ASC;
-
--- Fim do script.
