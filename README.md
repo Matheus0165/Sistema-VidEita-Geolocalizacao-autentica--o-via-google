@@ -445,3 +445,7 @@ Para testar pelo celular:
 ```bash
 ngrok http 8080
 ```
+A porta do Swagger é:
+http://localhost:8080/api-docs
+ou
+https://croak-buffed-vastness.ngrok-free.dev/api-docs
